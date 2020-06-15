@@ -1,12 +1,16 @@
 package crawler
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+
+	//"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -29,6 +33,8 @@ type Crawler struct {
 	Exclude    []string `json:exclude`
 	OutputType string   `outputType`
 	Output     io.Writer
+	Buf        *bytes.Buffer
+	Mutex      sync.Mutex
 }
 
 var authorPresent map[string]time.Time
@@ -39,13 +45,14 @@ func (cr *Crawler) Start() {
 	wg := &sync.WaitGroup{}
 	for _, blog := range blogs {
 		wg.Add(1)
-		go craw(cr.Exclude, &blog, 1, cr.Output, wg)
+		go cr.craw(&blog, 1, wg)
 	}
 	wg.Wait()
+	//write cache buf to cache file
 	fmt.Println("complete.")
+	writeToCacheFile(cr.Buf)
 }
-
-func craw(exs []string, b *blog, pageNum int, output io.Writer, wg *sync.WaitGroup) {
+func (cr *Crawler) craw(b *blog, pageNum int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	var addr string
 	if pageNum == 1 {
@@ -91,49 +98,64 @@ func craw(exs []string, b *blog, pageNum int, output io.Writer, wg *sync.WaitGro
 	doc.Find(b.PostStyle).Each(func(i int, s *goquery.Selection) {
 		title := s.Find(b.TitleStyle).Text()
 		//filter exclude
-		if checkExclude(title, exs) {
+		if checkExclude(title, cr.Exclude) {
+			return
+		}
+		//report whether cache file contains the blog
+		if bytes.Contains(cr.Buf.Bytes(), []byte(cacheFormat(title, b.Author))) {
 			return
 		}
 
 		timeStr := s.Find(b.TimeStyle).Text()
-		if timeStr == "" {
-			//TODO get first blog
-			noNewBlog = true
-			return
-		}
-
-		time, err := formatTime(timeStr)
-		if err != nil {
-			//TODO get first blog
-			noNewBlog = true
-			return
-		}
-		pTime, err := formatTime(b.PresentTime)
-		if err != nil {
-			panic("Convert present time error.")
-		}
-		if time.Before(pTime) {
-			noNewBlog = true
-			return
-		}
+		//if timeStr == "" {
+		//	//TODO get first blog
+		//	noNewBlog = true
+		//	return
+		//}
+		//
+		//time, err := formatTime(timeStr)
+		//if err != nil {
+		//	//TODO get first blog
+		//	noNewBlog = true
+		//	return
+		//}
+		//pTime, err := formatTime(b.PresentTime)
+		//if err != nil {
+		//	panic("Convert present time error.")
+		//}
+		//if time.Before(pTime) {
+		//	noNewBlog = true
+		//	return
+		//}
 
 		//record the present time
-		if authorPresent[b.Author].IsZero() {
-			authorPresent[b.Author] = time
-		}
+		//if authorPresent[b.Author].IsZero() {
+		//	authorPresent[b.Author] = time
+		//}
 
 		address, _ := s.Find(b.TitleStyle).Attr("href")
 		author := b.Author
-		writeToOutput(title, address, timeStr, author, output)
+		cr.writeToOutput(title, address, timeStr, author, cr.Output)
 	})
 	if !noNewBlog {
 		wg.Add(1)
 		initPageRule(b, doc)
 		pageNum++
-		craw(exs, b, pageNum, output, wg)
+		cr.craw(b, pageNum, wg)
 	}
 }
+func (cr *Crawler) writeToOutput(title, address, time string, author string, output io.Writer) {
+	if output != nil {
+		fmt.Fprintf(output, fmt.Sprintf("题目：%s；\n地址：%s；\n作者：%s；\n发布时间：%s\n\n", title, address, author, time))
+	}
+	cr.Mutex.Lock()
+	cr.Buf.Write([]byte(cacheFormat(title, author)))
+	cr.Mutex.Unlock()
+}
 
+func cacheFormat(title, author string) string {
+	return fmt.Sprintf("[[%s_%s]]", title, author)
+}
 func checkExclude(exStr string, exs []string) bool {
 	for _, ex := range exs {
 		if exStr == ex {
@@ -208,8 +230,15 @@ func formatTime(timeStr string) (time.Time, error) {
 	}
 	return t, nil
 }
-func writeToOutput(title, address, time string, author string, output io.Writer) {
-	if output != nil {
-		fmt.Fprintf(output, fmt.Sprintf("题目：%s；\n地址：%s；\n作者：%s；\n发布时间：%s\n\n", title, address, author, time))
+func writeToCacheFile(buf *bytes.Buffer) {
+	f, err := os.OpenFile("./blog.cache", os.O_APPEND|os.O_WRONLY, 0644)
+
+	if err != nil {
+		log.Fatal("Write to cache file error: %v", err)
+	}
+	defer f.Close()
+	_, err = f.Write(buf.Bytes())
+	if err != nil {
+		panic(fmt.Sprintf("Write to cache file error: %v", err))
 	}
 }

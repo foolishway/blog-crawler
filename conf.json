@@ -6,7 +6,7 @@
     "postStyle": ".post",
     "titleStyle": ".post h2 a",
     "timeStyle": ".post .updated",
-    "presentTime": "2020年05月12日"
+    "presentTime": "2020年01月12日"
   }],
   "exclude": ["关于《CSS选择器世界》这本书"],
   "outputType": "stdout"
