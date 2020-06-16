@@ -14,18 +14,16 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 type blog struct {
-	Author      string `json:"author"`
-	Address     string `json:"address"`
-	PageStyle   string `json:"pageStyle"`
-	PageRule    string `json:pageRule`
-	PostStyle   string `json:postStyle`
-	TitleStyle  string `json:titleStyle`
-	TimeStyle   string `json:timeStyle`
-	PresentTime string `json:presentTime`
+	Author     string `json:"author"`
+	Address    string `json:"address"`
+	PageRule   string `json:pageRule`
+	PostStyle  string `json:postStyle`
+	TitleStyle string `json:titleStyle`
+	TimeStyle  string `json:timeStyle`
+	wg         *sync.WaitGroup
 }
 type Crawler struct {
 	Blogs      []blog   `json:blogs`
@@ -36,27 +34,26 @@ type Crawler struct {
 	Mutex      sync.Mutex
 }
 
-var authorPresent map[string]time.Time
-
 func (cr *Crawler) Start() {
-	authorPresent = make(map[string]time.Time, len(cr.Blogs))
 	blogs := cr.Blogs
-	wg := &sync.WaitGroup{}
-	for _, blog := range blogs {
-		wg.Add(1)
-		go cr.craw(&blog, 1, wg)
+	for i := 0; i < len(blogs); i++ {
+		blogs[i].wg = &sync.WaitGroup{}
+		blogs[i].wg.Add(1)
+		go cr.craw(&(blogs[i]), 1)
 	}
-	wg.Wait()
-	//write cache buf to cache file
+	//wait all blogs complete
+	for i := 0; i < len(blogs); i++ {
+		blogs[i].wg.Wait()
+	}
 	fmt.Println("complete.")
 	writeToCacheFile(cr.Buf)
 }
-func (cr *Crawler) craw(b *blog, pageNum int, wg *sync.WaitGroup) {
+func (cr *Crawler) craw(b *blog, pageNum int) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println(r)
 		}
-		wg.Done()
+		b.wg.Done()
 	}()
 	var addr string
 	if pageNum == 1 {
@@ -64,11 +61,14 @@ func (cr *Crawler) craw(b *blog, pageNum int, wg *sync.WaitGroup) {
 	} else {
 		//rule = "http://www....."、 "?pn=20"
 		if b.PageRule != "" {
+			if b.PageRule[0] != '/' {
+				b.PageRule = "/" + b.PageRule
+			}
 			if checkURL(b.PageRule) {
 				addr = replacePageNum(b.PageRule, strconv.Itoa(pageNum))
 			} else {
 				u, _ := url.Parse(b.Address)
-				addr = u.Host + replacePageNum(b.PageRule, strconv.Itoa(pageNum))
+				addr = u.Scheme + "://" + u.Host + replacePageNum(b.PageRule, strconv.Itoa(pageNum))
 			}
 		} else {
 			return
@@ -107,28 +107,61 @@ func (cr *Crawler) craw(b *blog, pageNum int, wg *sync.WaitGroup) {
 		}
 		//report whether cache file contains the blog
 		if bytes.Contains(cr.Buf.Bytes(), []byte(cacheFormat(title, b.Author))) {
+			noNewBlog = true
 			return
 		}
 
 		timeStr := s.Find(b.TimeStyle).Text()
 
 		address, _ := s.Find(b.TitleStyle).Attr("href")
+		if address != "" && !checkURL(address) {
+			if address[0] != '/' {
+				address = "/" + address
+			}
+			u, err := url.Parse(b.Address)
+			if err != nil {
+				panic("parse blog address error.")
+			}
+			address = u.Scheme + "://" + u.Host + address
+		}
 		author := b.Author
 		cr.writeToOutput(title, address, timeStr, author, cr.Output)
 	})
 	if !noNewBlog {
-		wg.Add(1)
-		initPageRule(b, doc)
+		b.wg.Add(1)
+		//initPageRule(b, doc)
 		pageNum++
-		cr.craw(b, pageNum, wg)
+		cr.craw(b, pageNum)
 	}
 }
 func (cr *Crawler) writeToOutput(title, address, time string, author string, output io.Writer) {
+	if title == "" || address == "" {
+		return
+	}
 	if output != nil {
-		fmt.Fprintf(output, fmt.Sprintf("题目：%s；\n地址：%s；\n作者：%s；\n发布时间：%s\n\n", title, address, author, time))
+		t := title
+		ad := address
+		au := author
+		ti := time
+		if title == "" {
+			t = "--"
+		}
+		if address == "" {
+			ad = "--"
+		}
+		if author == "" {
+			au = "--"
+		}
+		if time == "" {
+			ti = "--"
+		}
+		fmt.Fprintf(output, fmt.Sprintf("题目：%s；\n地址：%s；\n作者：%s；\n发布时间：%s\n\n", t, ad, au, ti))
 	}
 	cr.Mutex.Lock()
-	cr.Buf.Write([]byte(cacheFormat(title, author)))
+	c := cacheFormat(title, author)
+	if !bytes.Contains(cr.Buf.Bytes(), []byte(c)) {
+		cr.Buf.Write([]byte(c))
+	}
 	cr.Mutex.Unlock()
 }
 
@@ -147,7 +180,6 @@ func checkURL(path string) bool {
 	urlRg, _ := regexp.Compile(`^(?i)https?://.+`)
 	return urlRg.MatchString(path)
 }
-
 func replacePageNum(uri, newPage string) string {
 	rg := regexp.MustCompile(`\d+`)
 	ms := rg.FindStringSubmatch(uri)
@@ -158,19 +190,6 @@ func replacePageNum(uri, newPage string) string {
 		uri = strings.Replace(uri, m, newPage, -1)
 	}
 	return uri
-}
-
-func initPageRule(b *blog, doc *goquery.Document) {
-	if b.PageRule == "" {
-		if ps := doc.Find(b.PageStyle); ps.Length() > 1 {
-			attr := ps.Get(1).Attr
-			for _, node := range attr {
-				if node.Key == "href" {
-					b.PageRule = node.Val
-				}
-			}
-		}
-	}
 }
 func writeToCacheFile(buf *bytes.Buffer) {
 	f, err := os.OpenFile("./blog.cache", os.O_APPEND|os.O_WRONLY, 0644)

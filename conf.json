@@ -1,13 +1,27 @@
 {
   "blogs": [{
-    "address": "https://www.zhangxinxu.com/wordpress/",
-    "author": "张鑫旭",
-    "pageStyle": ".wp-pagenavi a",
-    "postStyle": ".post",
-    "titleStyle": ".post h2 a",
-    "timeStyle": ".post .updated",
-    "presentTime": "2020年01月12日"
-  }],
-  "exclude": ["关于《CSS选择器世界》这本书"],
+      "address": "http://www.tracefact.net/",
+      "author": "张子阳",
+      "pageRule": "?page=1",
+      "postStyle": "div.article",
+      "titleStyle": "div.article .title a"
+    },
+    {
+      "address": "https://www.zhangxinxu.com/wordpress/",
+      "author": "张鑫旭",
+      "pageRule": "wordpress/page/2/",
+      "postStyle": "div.post",
+      "titleStyle": "div.post h2 a",
+      "timeStyle": "div.post .date"
+    },
+    {
+      "address": "https://research.swtch.com/",
+      "author": " Russ Cox",
+      "pageRule": "",
+      "postStyle": ".toc li",
+      "titleStyle": ".toc li a",
+      "timeStyle": ".toc li span.toc-when"
+    }
+  ],
   "outputType": "stdout"
 }
