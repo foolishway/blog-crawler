@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -83,7 +84,7 @@ func (cr *Crawler) craw(b *blog, pageNum int) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		panic(fmt.Sprintf("status code error: %d %s", res.StatusCode, res.Status))
+		panic(fmt.Sprintf("Requst %s status code error: %d %s", b.Address, res.StatusCode, res.Status))
 	}
 
 	// Load the HTML document
@@ -95,6 +96,9 @@ func (cr *Crawler) craw(b *blog, pageNum int) {
 	posts := doc.Find(b.PostStyle)
 
 	if posts.Length() == 0 {
+		if pageNum == 1 {
+			log.Printf("%s dit not published articles yet.")
+		}
 		noNewBlog = true
 		return
 	}
