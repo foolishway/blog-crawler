@@ -2,4 +2,8 @@
 
 go build -o blog-crawler *.go;
 
-cp blog-crawler blogCrawlerConf.json $GOPATH/bin;
+if [ -e ./blogCrawlerConf.json ]; then
+  cp blog-crawler blogCrawlerConf.json $GOPATH/bin;
+else
+  cp blog-crawler $GOPATH/bin;
+fi
