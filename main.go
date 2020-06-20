@@ -8,14 +8,20 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"time"
 )
 
+var (
+	cachePath string = "./blog.cache"
+	confPath  string = "./blogCrawlerConf.json"
+)
+
 func main() {
-	confPath := "./blogCrawlerConf.json"
 	envConf, envSet := os.LookupEnv("BLOG_CRAWER_CONF")
 	if envSet {
 		confPath = envConf
+		cachePath = path.Dir(confPath) + "/" + path.Base(cachePath)
 	}
 	_, err := os.Stat(confPath)
 	if err != nil && os.IsNotExist(err) {
@@ -28,7 +34,7 @@ func main() {
 	}
 	defer conf.Close()
 
-	c := &crawler.Crawler{}
+	c := &crawler.Crawler{CachePath: cachePath}
 	b, err := ioutil.ReadAll(conf)
 	if err != nil {
 		log.Fatalf("Read from conf error %v", err)
@@ -43,10 +49,9 @@ func main() {
 	}
 
 	if c.Buf == nil {
-		cachePath := "./blog.cache"
 		var f *os.File
 		if !fileExists(cachePath) {
-			f, err = os.Create("./blog.cache")
+			f, err = os.Create(cachePath)
 			if err != nil {
 				panic("create cache file error.")
 			}

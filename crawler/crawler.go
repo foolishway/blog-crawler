@@ -33,6 +33,7 @@ type Crawler struct {
 	Output     io.Writer
 	Buf        *bytes.Buffer
 	Mutex      sync.Mutex
+	CachePath  string
 }
 
 func (cr *Crawler) Start() {
@@ -47,7 +48,7 @@ func (cr *Crawler) Start() {
 		blogs[i].wg.Wait()
 	}
 	fmt.Println("complete.")
-	writeToCacheFile(cr.Buf)
+	writeToCacheFile(cr.Buf, cr.CachePath)
 }
 func (cr *Crawler) craw(b *blog, pageNum int) {
 	defer func() {
@@ -195,8 +196,8 @@ func replacePageNum(uri, newPage string) string {
 	}
 	return uri
 }
-func writeToCacheFile(buf *bytes.Buffer) {
-	f, err := os.OpenFile("./blog.cache", os.O_APPEND|os.O_WRONLY, 0644)
+func writeToCacheFile(buf *bytes.Buffer, cachePath string) {
+	f, err := os.OpenFile(cachePath, os.O_APPEND|os.O_WRONLY, 0644)
 
 	if err != nil {
 		panic(fmt.Sprintf("Write to cache file error: %v", err))
