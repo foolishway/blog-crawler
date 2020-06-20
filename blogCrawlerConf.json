@@ -21,7 +21,15 @@
       "postStyle": ".toc li",
       "titleStyle": ".toc li a",
       "timeStyle": ".toc li span.toc-when"
-    }
+    },
+	{
+		"address": "https://mdlayher.com/blog/",
+		"author": "Matt Layher",
+		"pageRule": "",
+		"postStyle": "main li",
+		"titleStyle": "main li a",
+		"timeStyle": ""
+	}
   ],
   "outputType": "stdout"
 }

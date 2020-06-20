@@ -8,10 +8,21 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
 )
 
 func main() {
-	conf, err := os.Open("./conf.json")
+	confPath := "./blogCrawlerConf.json"
+	envConf, envSet := os.LookupEnv("BLOG_CRAWER_CONF")
+	if envSet {
+		confPath = envConf
+	}
+	_, err := os.Stat(confPath)
+	if err != nil && os.IsNotExist(err) {
+		log.Fatalf("Config file not found.")
+	}
+
+	conf, err := os.Open(confPath)
 	if err != nil {
 		log.Fatalf("Open conf error %v", err)
 	}
@@ -42,7 +53,7 @@ func main() {
 		} else {
 			f, err = os.Open(cachePath)
 			if err != nil {
-				panic("create cache file error.")
+				panic("open cache file error.")
 			}
 		}
 
@@ -53,6 +64,8 @@ func main() {
 		}
 		c.Buf = bytes.NewBuffer(cacheBytes)
 	}
+
+	time.Tick(24 * time.Hour)
 	c.Start()
 }
 func fileExists(filename string) bool {

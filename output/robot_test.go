@@ -25,7 +25,8 @@ func TestWrite(t *testing.T) {
 	}))
 	defer ts.Close()
 	rb := &robot{basePath: ts.URL, accessToken: "accessToken"}
-	n, err := rb.Write([]byte("hellorobot"))
+	//n, err := rb.Write([]byte("hellorobot"))
+	n, err := fmt.Fprint(rb, "hellorobot")
 	if err != nil {
 		log.Fatalf("Robot write error: %v", err)
 	}
