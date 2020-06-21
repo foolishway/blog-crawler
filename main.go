@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"time"
 )
 
 var (
@@ -18,7 +17,8 @@ var (
 )
 
 func main() {
-	envConf, envSet := os.LookupEnv("BLOG_CRAWER_CONF")
+	envConf, envSet := os.LookupEnv("BLOG_CRAWLER_CONF")
+	//if set BLOG_CRAWER_CONF environment variable, the cache file will be generated under the same path
 	if envSet {
 		confPath = envConf
 		cachePath = path.Dir(confPath) + "/" + path.Base(cachePath)
@@ -70,7 +70,6 @@ func main() {
 		c.Buf = bytes.NewBuffer(cacheBytes)
 	}
 
-	time.Tick(24 * time.Hour)
 	c.Start()
 }
 func fileExists(filename string) bool {
