@@ -197,7 +197,7 @@ func replacePageNum(uri, newPage string) string {
 	return uri
 }
 func writeToCacheFile(buf *bytes.Buffer, cachePath string) {
-	f, err := os.OpenFile(cachePath, os.O_APPEND|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(cachePath, os.O_TRUNC|os.O_WRONLY, 0644)
 
 	if err != nil {
 		panic(fmt.Sprintf("Write to cache file error: %v", err))
