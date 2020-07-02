@@ -19,7 +19,7 @@ func (hs *HttpServer) StartServer() {
 	// 从模板文件构建
 	tpl := template.Must(
 		template.ParseGlob(
-			"./http-server/views/*.html",
+			"./views/*.html",
 		),
 	)
 
@@ -42,7 +42,7 @@ func (hs *HttpServer) StartServer() {
 
 //static server
 func serveFile() {
-	fs := http.Dir("./http-server/static")
+	fs := http.Dir("./static")
 	handler := http.StripPrefix("/static", http.FileServer(fs))
 	http.Handle("/static/", handler)
 }
