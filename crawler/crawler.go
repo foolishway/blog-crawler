@@ -11,25 +11,17 @@ import (
 	"os"
 
 	//"os"
+	"blog-crawler/models"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 )
 
-type blog struct {
-	Author     string `json:"author"`
-	Address    string `json:"address"`
-	PageRule   string `json:pageRule`
-	PostStyle  string `json:postStyle`
-	TitleStyle string `json:titleStyle`
-	TimeStyle  string `json:timeStyle`
-	wg         *sync.WaitGroup
-}
 type Crawler struct {
-	Blogs      []blog   `json:blogs`
-	Exclude    []string `json:exclude`
-	OutputType string   `outputType`
+	Blogs      []models.Blog `json:blogs`
+	Exclude    []string      `json:exclude`
+	OutputType string        `outputType`
 	Output     io.Writer
 	Buf        *bytes.Buffer
 	Mutex      sync.Mutex
@@ -38,24 +30,26 @@ type Crawler struct {
 
 func (cr *Crawler) Start() {
 	blogs := cr.Blogs
+	wgQue := make([]*sync.WaitGroup, 0)
 	for i := 0; i < len(blogs); i++ {
-		blogs[i].wg = &sync.WaitGroup{}
-		blogs[i].wg.Add(1)
-		go cr.craw(&(blogs[i]), 1)
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		wgQue = append(wgQue, wg)
+		go cr.craw(wg, &(blogs[i]), 1)
 	}
 	//wait all blogs complete
-	for i := 0; i < len(blogs); i++ {
-		blogs[i].wg.Wait()
+	for i := 0; i < len(wgQue); i++ {
+		wgQue[i].Wait()
 	}
 	fmt.Println("complete.")
 	writeToCacheFile(cr.Buf, cr.CachePath)
 }
-func (cr *Crawler) craw(b *blog, pageNum int) {
+func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println(r)
 		}
-		b.wg.Done()
+		wg.Done()
 	}()
 	var addr string
 	if pageNum == 1 {
@@ -133,10 +127,10 @@ func (cr *Crawler) craw(b *blog, pageNum int) {
 		cr.writeToOutput(title, address, timeStr, author, cr.Output)
 	})
 	if !noNewBlog {
-		b.wg.Add(1)
+		wg.Add(1)
 		//initPageRule(b, doc)
 		pageNum++
-		cr.craw(b, pageNum)
+		cr.craw(wg, b, pageNum)
 	}
 }
 func (cr *Crawler) writeToOutput(title, address, time string, author string, output io.Writer) {

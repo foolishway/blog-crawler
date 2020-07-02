@@ -2,9 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>首页</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/common.css">
 </head>
 <body>
-    文章列表
+    <div id="main">
+        <ul id="articleList">
+            {{range .}}
+                <li>
+                    <span class="title"><a href="{{.Address}}">{{.Title}}</a></span>
+                    <span class="publish-time">{{.PublishTime}}</span>
+                    <span class="author">{{.Author}}</span>
+                </li>
+            {{end}}
+        </ul>
+    </div>
 </body>
 </html>
