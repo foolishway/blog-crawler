@@ -2,10 +2,9 @@ package main
 
 import (
 	"blog-crawler/crawler"
-	//hs "blog-crawler/http-server"
-	"bytes"
+	"blog-crawler/models"
+
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"path"
@@ -25,7 +24,7 @@ var (
 	confPath  string = "./blogCrawlerConf.json"
 )
 
-const total = 100
+const avg = 10
 
 func main() {
 	//s := &hs.HttpServer{"8003"}
@@ -47,7 +46,7 @@ func main() {
 	}
 	defer conf.Close()
 
-	c := &crawler.Crawler{CachePath: cachePath}
+	c := &crawler.Crawler{CachePath: cachePath, CollectArticles: make([]models.Article, 0)}
 	b, err := ioutil.ReadAll(conf)
 	if err != nil {
 		log.Fatalf("Read from conf error %v", err)
@@ -61,27 +60,27 @@ func main() {
 		c.Output = os.Stdout
 	}
 
-	if c.Buf == nil {
-		var f *os.File
-		if !fileExists(cachePath) {
-			f, err = os.Create(cachePath)
-			if err != nil {
-				panic("create cache file error.")
-			}
-		} else {
-			f, err = os.Open(cachePath)
-			if err != nil {
-				panic("open cache file error.")
-			}
-		}
-
-		defer f.Close()
-		cacheBytes, err := ioutil.ReadAll(f)
-		if err != nil {
-			panic(fmt.Sprintf("Read blog.cache file error: %v", err))
-		}
-		c.Buf = bytes.NewBuffer(cacheBytes)
-	}
+	//if c.Buf == nil {
+	//	var f *os.File
+	//	if !fileExists(cachePath) {
+	//		f, err = os.Create(cachePath)
+	//		if err != nil {
+	//			panic("create cache file error.")
+	//		}
+	//	} else {
+	//		f, err = os.Open(cachePath)
+	//		if err != nil {
+	//			panic("open cache file error.")
+	//		}
+	//	}
+	//
+	//	defer f.Close()
+	//	cacheBytes, err := ioutil.ReadAll(f)
+	//	if err != nil {
+	//		panic(fmt.Sprintf("Read blog.cache file error: %v", err))
+	//	}
+	//	c.Buf = bytes.NewBuffer(cacheBytes)
+	//}
 
 	c.Start()
 }

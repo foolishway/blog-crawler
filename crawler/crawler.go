@@ -18,14 +18,24 @@ import (
 	"sync"
 )
 
+var existMap map[string]struct{}
+
+func init() {
+	if existMap == nil {
+		articles := models.GetAllArticles()
+		existMap = models.AriticleModelToMap(articles)
+	}
+}
+
 type Crawler struct {
-	Blogs      []models.Blog `json:blogs`
-	Exclude    []string      `json:exclude`
-	OutputType string        `outputType`
-	Output     io.Writer
-	Buf        *bytes.Buffer
-	Mutex      sync.Mutex
-	CachePath  string
+	Blogs           []models.Blog `json:blogs`
+	Exclude         []string      `json:exclude`
+	OutputType      string        `outputType`
+	Output          io.Writer
+	Buf             *bytes.Buffer
+	Mutex           sync.Mutex
+	CachePath       string
+	CollectArticles []models.Article
 }
 
 func (cr *Crawler) Start() {
@@ -201,4 +211,8 @@ func writeToCacheFile(buf *bytes.Buffer, cachePath string) {
 	if err != nil {
 		panic(fmt.Sprintf("Write to cache file error: %v", err))
 	}
+}
+func isExist(key string) bool {
+	_, exist := existMap[key]
+	return exist
 }
