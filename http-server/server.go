@@ -2,7 +2,9 @@ package http_server
 
 import (
 	"blog-crawler/models"
+	"blog-crawler/utils"
 	"html/template"
+	"log"
 	"net/http"
 )
 
@@ -25,14 +27,25 @@ func (hs *HttpServer) StartServer() {
 			return
 		}
 		articles := models.GetAllArticles()
+		randomArticles := make([]models.Article, len(articles))
+		if itfs := utils.RandomSlice(articles); len(itfs) > 0 {
+			for index, itf := range itfs {
+				if newArticle, ok := itf.(models.Article); ok {
+					randomArticles[index] = newArticle
+				}
+			}
+		}
 		// render template with tplName index
 		_ = tpl.ExecuteTemplate(
 			w,
 			"index.html",
-			articles,
+			randomArticles,
 		)
 	})
-	http.ListenAndServe(":"+hs.Port, nil)
+	err := http.ListenAndServe(":"+hs.Port, nil)
+	if err != nil {
+		log.Fatalf("Http server listen error %v", err)
+	}
 }
 
 //static server

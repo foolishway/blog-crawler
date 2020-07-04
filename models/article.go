@@ -37,7 +37,6 @@ func InsertCollectArticles(articles []Article) error {
 		valueArgs = append(valueArgs, post.Address)
 		valueArgs = append(valueArgs, post.Author)
 		valueArgs = append(valueArgs, post.PublishTime)
-
 	}
 	stmt := fmt.Sprintf("INSERT INTO article (title, address, author, publish_time) VALUES %s",
 		strings.Join(valueStrings, ","))

@@ -16,3 +16,8 @@ func init() {
 	}
 	log.Println("Database established.")
 }
+
+func CloseDb() error {
+	log.Println("Db closed.")
+	return db.Close()
+}

@@ -1,30 +1,29 @@
 package crawler
 
 import (
-	"bytes"
+	"blog-crawler/models"
+	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-
-	//"os"
-	"blog-crawler/models"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 )
 
+const avg = 10
+
 var existMap map[string]struct{}
 
-func init() {
-	if existMap == nil {
-		articles := models.GetAllArticles()
-		existMap = models.AriticleModelToMap(articles)
-	}
+func fillExistMap() {
+	articles := models.GetAllArticles()
+	existMap = models.AriticleModelToMap(articles)
 }
 
 type Crawler struct {
@@ -32,13 +31,12 @@ type Crawler struct {
 	Exclude         []string      `json:exclude`
 	OutputType      string        `outputType`
 	Output          io.Writer
-	Buf             *bytes.Buffer
 	Mutex           sync.Mutex
-	CachePath       string
 	CollectArticles []models.Article
 }
 
 func (cr *Crawler) Start() {
+	fillExistMap()
 	blogs := cr.Blogs
 	wgQue := make([]*sync.WaitGroup, 0)
 	for i := 0; i < len(blogs); i++ {
@@ -51,10 +49,15 @@ func (cr *Crawler) Start() {
 	for i := 0; i < len(wgQue); i++ {
 		wgQue[i].Wait()
 	}
-	fmt.Println("complete.")
-	writeToCacheFile(cr.Buf, cr.CachePath)
+	fmt.Println("Crawl complete.")
+	//writeToCacheFile(cr.Buf, cr.CachePath)
+	if len(cr.CollectArticles) > 0 {
+		//fmt.Println(cr.CollectArticles)
+		models.InsertCollectArticles(cr.CollectArticles)
+	}
 }
 func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
+	//fmt.Println("craw len(cr.CollectArticles)", len(cr.CollectArticles))
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println(r)
@@ -81,7 +84,7 @@ func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
 		}
 	}
 
-	var noNewBlog bool
+	var stopCrawl bool
 	// Request the HTML page.
 	res, err := http.Get(addr)
 	if err != nil {
@@ -104,19 +107,23 @@ func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
 		if pageNum == 1 {
 			log.Printf("%s dit not published articles yet.")
 		}
-		noNewBlog = true
+		stopCrawl = true
 		return
 	}
 	// Find blogs
 	doc.Find(b.PostStyle).Each(func(i int, s *goquery.Selection) {
+		if stopCrawl {
+			return
+		}
 		title := s.Find(b.TitleStyle).Text()
+		author := b.Author
 		//filter exclude
 		if checkExclude(title, cr.Exclude) {
 			return
 		}
 		//report whether cache file contains the blog
-		if bytes.Contains(cr.Buf.Bytes(), []byte(cacheFormat(title, b.Author))) {
-			noNewBlog = true
+		if isExist(title+"_"+b.Author) || overArg(author, cr.CollectArticles) {
+			stopCrawl = true
 			return
 		}
 
@@ -133,49 +140,33 @@ func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
 			}
 			address = u.Scheme + "://" + u.Host + address
 		}
-		author := b.Author
-		cr.writeToOutput(title, address, timeStr, author, cr.Output)
+		cr.CollectArticles = append(cr.CollectArticles, models.Article{Title: title, Author: author, Address: address, PublishTime: timeStr})
 	})
-	if !noNewBlog {
+	if !stopCrawl {
 		wg.Add(1)
 		//initPageRule(b, doc)
 		pageNum++
 		cr.craw(wg, b, pageNum)
 	}
 }
-func (cr *Crawler) writeToOutput(title, address, time string, author string, output io.Writer) {
-	if title == "" || address == "" {
-		return
-	}
-	if output != nil {
-		t := title
-		ad := address
-		au := author
-		ti := time
-		if title == "" {
-			t = "--"
-		}
-		if address == "" {
-			ad = "--"
-		}
-		if author == "" {
-			au = "--"
-		}
-		if time == "" {
-			ti = "--"
-		}
-		fmt.Fprintf(output, fmt.Sprintf("题目：%s；\n地址：%s；\n作者：%s；\n发布时间：%s\n\n", t, ad, au, ti))
-	}
-	cr.Mutex.Lock()
-	c := cacheFormat(title, author)
-	if !bytes.Contains(cr.Buf.Bytes(), []byte(c)) {
-		cr.Buf.Write([]byte(c))
-	}
-	cr.Mutex.Unlock()
-}
 
-func cacheFormat(title, author string) string {
-	return fmt.Sprintf("[[%s_%s]]", title, author)
+func NewCrawler(confPath string) *Crawler {
+	conf, err := os.Open(confPath)
+	if err != nil {
+		log.Fatalf("Open conf error %v", err)
+	}
+	defer conf.Close()
+
+	c := &Crawler{CollectArticles: make([]models.Article, 0)}
+	b, err := ioutil.ReadAll(conf)
+	if err != nil {
+		log.Fatalf("Read from conf error %v", err)
+	}
+	err = json.Unmarshal(b, c)
+	if err != nil {
+		log.Fatalf("Unmarshall json error: %v", err)
+	}
+	return c
 }
 func checkExclude(exStr string, exs []string) bool {
 	for _, ex := range exs {
@@ -200,19 +191,19 @@ func replacePageNum(uri, newPage string) string {
 	}
 	return uri
 }
-func writeToCacheFile(buf *bytes.Buffer, cachePath string) {
-	f, err := os.OpenFile(cachePath, os.O_TRUNC|os.O_WRONLY, 0644)
-
-	if err != nil {
-		panic(fmt.Sprintf("Write to cache file error: %v", err))
-	}
-	defer f.Close()
-	_, err = f.Write(buf.Bytes())
-	if err != nil {
-		panic(fmt.Sprintf("Write to cache file error: %v", err))
-	}
-}
 func isExist(key string) bool {
 	_, exist := existMap[key]
 	return exist
+}
+func overArg(author string, cellectAticle []models.Article) bool {
+	var count int32
+	for _, article := range cellectAticle {
+		if article.Author == author {
+			count++
+		}
+	}
+	if count >= avg {
+		return true
+	}
+	return false
 }
