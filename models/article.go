@@ -15,3 +15,10 @@ type Article struct {
 	Address     string
 	PublishTime string
 }
+
+func GetAllArticles() []Article {
+	//defer db.Close()
+	articles := make([]Article, 0)
+	db.Table("article").Find(&articles)
+	return articles
+}
