@@ -1,10 +1,34 @@
-blog-crawler like its name, is a simple crawler, which can fetch blog title, address,  author, and publish time and so on  by your config file.
+blog-crawler 通过给定的配置文件，爬取指定的博客文章。每次爬取都是博主最新的文章。类似于"订阅"。
 
-blog-crawler will ignore the blogs which has already got, so you can get the latest blog by execute the blog-crawler binary file.
+**_tag 1.0.0_** 是命令行版本，命令行下运行blog-crawler，会把抓取到的文章信息输出到stdOut.
 
-### Usage
+用法：
 
-The key step is set the **BLOG_CRAWLER_CONF** environment variable，which points the config file, and then
-
-you can execute the blog-crawler any where, if you did not set the **BLOG_CRAWLER_CONF** , blog-crawler will find the config file at the current path, if not found, it will log the error and then exit.
+配置环境变量：_**BLOG_CRAWLER_CONF**_ 指向一个配置文件，配置文件格式如下：
+``` json
+{
+  "blogs": [{
+      "address": "http://www.tracefact.net/",
+      "author": "张子阳",
+      "pageRule": "?page=1",
+      "postStyle": "div.article",
+      "titleStyle": "div.article .title a"
+    },
+    {
+      "address": "https://www.zhangxinxu.com/wordpress/",
+      "author": "张鑫旭",
+      "pageRule": "wordpress/page/2/",
+      "postStyle": "div.post",
+      "titleStyle": "div.post h2 a",
+      "timeStyle": "div.post .date"
+    }]
+}
+```
+字段说明：
+* address 博客地址
+* author 作者
+* pageRule 分页规则
+* postStyle 文章列表样式
+* titleStyle 博客标题样式
+* timeStyle 博客发表时间样式
 
