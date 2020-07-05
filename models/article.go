@@ -4,6 +4,7 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"strings"
+	"time"
 )
 
 type Blog struct {
@@ -25,7 +26,8 @@ type Article struct {
 func GetAllArticles() []Article {
 	//defer db.Close()
 	articles := make([]Article, 0)
-	db.Table("article").Find(&articles)
+	timeLimit := time.Now().Add(-(30 * 24 * time.Hour)).Format("2006-01-02 00:00:00")
+	db.Table("article").Where("collect_time >= ?", timeLimit).Find(&articles)
 	return articles
 }
 func InsertCollectArticles(articles []Article) error {
