@@ -1,18 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta id="viewport" name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1; user-scalable=no;">
     <meta charset="UTF-8">
     <title>首页</title>
     <link rel="stylesheet" type="text/css" href="/static/css/common.css">
+    <script src="/static/js/jquery-3.5.1.min.js"></script>
+    <script src="/static/js/index.js"></script>
 </head>
 <body>
     <div id="main">
         <ul id="articleList">
+            <li class="toc-head"><b>文库列表(点击<img class="share-img" src="/static/imgs/share.png" alt="">
+                    分享到知音楼前端群)</b></li>
             {{range .}}
                 <li>
-                    <span class="title"><a href="{{.Address}}">{{.Title}}</a></span>
+                    <span class="artice-id">{{.ArticleId}}</span>
+                    <span class="title"><a class="address" href="{{.Address}}">{{.Title}}</a></span>
                     <span class="publish-time">{{.PublishTime}}</span>
                     <span class="author">{{.Author}}</span>
+                    <span class="share">
+                        {{if eq .IsShared "0"}}
+                        <img class="share-img" src="/static/imgs/share.png" alt="">
+                        {{else}}
+                        <b class="shared">已分享</b>
+                        {{end}}
+                    </span>
                 </li>
             {{end}}
         </ul>

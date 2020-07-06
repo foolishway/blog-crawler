@@ -17,10 +17,12 @@ type Blog struct {
 }
 
 type Article struct {
+	ArticleId   string
 	Author      string
 	Title       string
 	Address     string
 	PublishTime string
+	IsShared    string
 }
 
 func GetAllArticles() []Article {
@@ -28,8 +30,10 @@ func GetAllArticles() []Article {
 	articles := make([]Article, 0)
 	timeLimit := time.Now().Add(-(30 * 24 * time.Hour)).Format("2006-01-02 00:00:00")
 	db.Table("article").Where("collect_time >= ?", timeLimit).Find(&articles)
+	//fmt.Println(articles)
 	return articles
 }
+
 func InsertCollectArticles(articles []Article) error {
 	valueStrings := make([]string, 0, len(articles))
 	valueArgs := make([]interface{}, 0, len(articles)*3)
@@ -46,6 +50,10 @@ func InsertCollectArticles(articles []Article) error {
 
 }
 
+func UpdateShareFeild(articleId string) error {
+	err := db.Table("article").Where("article_id = ?", articleId).Update("is_shared", "1").Error
+	return err
+}
 func AriticleModelToMap(articles []Article) map[string]struct{} {
 	m := make(map[string]struct{}, 0)
 	if len(articles) > 0 {

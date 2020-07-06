@@ -1,4 +1,21 @@
-ul li {
+#main ul {
+    list-style-type: none;
+}
+#main ul li {
     margin: 0;
     padding: 0;
+    padding: 5px 0;
+}
+#main .artice-id{
+    display: none;
+}
+.share-img {
+    width: 12px;
+}
+.shared {
+    color: red;
+}
+#main {
+    margin: 0 auto;
+    /*width:800px;*/
 }

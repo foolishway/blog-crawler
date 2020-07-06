@@ -14,7 +14,7 @@ func TestGetSign(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	rb := &robot{basePath: ts.URL, accessToken: "accessToken"}
+	rb := &Robot{BasePath: ts.URL, AccessToken: "accessToken"}
 	timestamp, sign := rb.getSign()
 	t.Logf("timestamp: %d, sign: %s", timestamp, sign)
 }
@@ -24,7 +24,7 @@ func TestWrite(t *testing.T) {
 		fmt.Fprintln(w, "Hello, client")
 	}))
 	defer ts.Close()
-	rb := &robot{basePath: ts.URL, accessToken: "accessToken"}
+	rb := &Robot{BasePath: ts.URL, AccessToken: "accessToken"}
 	//n, err := rb.Write([]byte("hellorobot"))
 	n, err := fmt.Fprint(rb, "hellorobot")
 	if err != nil {

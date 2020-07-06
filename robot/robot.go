@@ -14,9 +14,9 @@ import (
 	"unsafe"
 )
 
-type robot struct {
-	basePath    string
-	accessToken string
+type Robot struct {
+	BasePath    string
+	AccessToken string
 }
 type Text struct {
 	Content string
@@ -31,14 +31,14 @@ type msgStruct struct {
 	At      At     `json:"at"`
 }
 
-func (rb *robot) Write(p []byte) (n int, err error) {
+func (rb *Robot) Write(p []byte) (n int, err error) {
 	timestamp, sign := rb.getSign()
 	v := make(url.Values)
-	v.Set("access_token", rb.accessToken)
+	v.Set("access_token", rb.AccessToken)
 	v.Set("timestamp", strconv.FormatInt(timestamp, 10))
 	v.Set("sign", sign)
 
-	reqUrl := rb.basePath + "?" + v.Encode()
+	reqUrl := rb.BasePath + "?" + v.Encode()
 	content := *(*string)(unsafe.Pointer(&p))
 	rs := msgStruct{
 		Msgtype: "text",
@@ -58,9 +58,9 @@ func (rb *robot) Write(p []byte) (n int, err error) {
 	return len(content), nil
 }
 
-func (rb *robot) getSign() (timestamp int64, sign string) {
+func (rb *Robot) getSign() (timestamp int64, sign string) {
 	timeStamp := time.Now().UnixNano()
-	s := fmt.Sprintf("%d\n%s", timeStamp, rb.accessToken)
+	s := fmt.Sprintf("%d\n%s", timeStamp, rb.AccessToken)
 	// Create a new HMAC by defining the hash type and the key (as byte array)
 	h := hmac.New(sha256.New, []byte(s))
 	// Get result and encode as hexadecimal string
