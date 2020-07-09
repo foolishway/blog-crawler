@@ -23,7 +23,7 @@ func (hs *HttpServer) StartServer() {
 	serveFile()
 	tpl := template.Must(
 		template.ParseGlob(
-			"./http-server/views/*.html",
+			"./static/views/*.html",
 		),
 	)
 
@@ -91,15 +91,14 @@ func shareHandler(w http.ResponseWriter, r *http.Request) {
 	//set article's is_shared field "1"
 	err = models.UpdateShareFeild(rs.ArticleId)
 	if err != nil {
-		log.Printf("Robot write error: %v", err)
-		http.Error(w, "", http.StatusInternalServerError)
-		return
+		log.Printf("Update share feild error: %v", err)
 	}
 }
 
 //static server
 func serveFile() {
-	fs := http.Dir("./http-server/static")
+	//absolue path
+	fs := http.Dir("./static")
 	handler := http.StripPrefix("/static", http.FileServer(fs))
 	http.Handle("/static/", handler)
 }

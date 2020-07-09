@@ -1,0 +1,26 @@
+version: '3'
+services:
+  blog_crawler_db:
+    build:
+      context: ./MySQL
+    environment:
+      MYSQL_ROOT_PASSWORD: zrl900511
+      MYSQL_DATABASE: blog_crawler
+      MYSQL_USER: blog_crawler
+      MYSQL_PASSWORD: zrl900511
+    container_name: blog_crawler_db
+    ports:
+      - "3306:3306"
+    tty: true
+  blog_crawler_app:
+    build: .
+    volumes:
+      - ./cmd:/blog-crawler/cmd
+      - ./blogCrawlerConf.json:/blog-crawler/blogCrawlerConf.json
+    container_name: blog_crawler_app
+    ports:
+      - "8003:8003"
+    tty: true
+    depends_on:
+      - blog_crawler_db
+    restart: on-failure

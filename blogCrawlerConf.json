@@ -1,0 +1,73 @@
+{
+  "blogs": [{
+      "address": "http://www.tracefact.net/",
+      "author": "张子阳",
+      "pageRule": "?page=1",
+      "postStyle": "div.article",
+      "titleStyle": "div.article .title a"
+    },
+    {
+      "address": "https://www.zhangxinxu.com/wordpress/",
+      "author": "张鑫旭",
+      "pageRule": "wordpress/page/2/",
+      "postStyle": "div.post",
+      "titleStyle": "div.post h2 a",
+      "timeStyle": "div.post .date"
+    },
+    {
+      "address": "https://research.swtch.com/",
+      "author": " Russ Cox",
+      "pageRule": "",
+      "postStyle": ".toc li",
+      "titleStyle": ".toc li a",
+      "timeStyle": ".toc li span.toc-when"
+    },
+	{
+		"address": "https://mdlayher.com/blog/",
+		"author": "Matt Layher",
+		"pageRule": "",
+		"postStyle": "main li",
+		"titleStyle": "main li a",
+		"timeStyle": ""
+	},
+	{
+		"address": "https://arslan.io/posts/",
+		"author": "Fatih Arslan",
+		"pageRule": "",
+		"postStyle": "ul.posts li",
+		"titleStyle": "ul.posts li a",
+		"timeStyle": "ul.posts li time"
+	},
+	{
+		"address": "https://tonybai.com/articles/",
+		"author": "Tony Bai",
+		"pageRule": "",
+		"postStyle": "div.post-content ul li",
+		"titleStyle": "div.post-content ul li a",
+		"timeStyle": ""
+	},
+	{
+		"address": "https://colobu.com/",
+		"author": "鸟窝",
+		"pageRule": "page/2/",
+		"postStyle": "section#main article.article",
+		"titleStyle": "section#main article.article h1 a.article-title",
+		"timeStyle": "section#main article.article a.article-date time"
+	},
+	{
+		"address": "https://blog.gopheracademy.com/",
+		"author": "gopher",
+		"pageRule": "page/2/",
+		"postStyle": "div.listrecent div.card-group",
+		"titleStyle": "div.listrecent div.card-group h2.card-title a"
+	},
+	{
+		"address": "https://imququ.com/",
+		"author": "Jerry Qiu",
+		"pageRule": "?pn=2",
+		"postStyle": "div#content article.post-list",
+		"titleStyle": "div#content article.post-list h1.title a"
+	}
+  ],
+  "outputType": "stdout"
+}
