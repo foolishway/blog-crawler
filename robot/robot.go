@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -17,9 +19,10 @@ import (
 type Robot struct {
 	BasePath    string
 	AccessToken string
+	AccessKey   string
 }
 type Text struct {
-	Content string
+	Content string `json:"content"`
 }
 type At struct {
 	AtMobiles []string `json:"atMobiles"`
@@ -37,8 +40,8 @@ func (rb *Robot) Write(p []byte) (n int, err error) {
 	v.Set("access_token", rb.AccessToken)
 	v.Set("timestamp", strconv.FormatInt(timestamp, 10))
 	v.Set("sign", sign)
-
 	reqUrl := rb.BasePath + "?" + v.Encode()
+
 	content := *(*string)(unsafe.Pointer(&p))
 	rs := msgStruct{
 		Msgtype: "text",
@@ -47,22 +50,39 @@ func (rb *Robot) Write(p []byte) (n int, err error) {
 	}
 	reqData, err := json.Marshal(&rs)
 
+	log.Println("reqData:%s", string(reqData))
 	if err != nil {
 		return 0, fmt.Errorf("Marshal request data error: %v", err)
 	}
-	_, err = http.Post(reqUrl, "application/json", bytes.NewReader(reqData))
+	res, err := http.Post(reqUrl, "application/json", bytes.NewReader(reqData))
 	if err != nil {
 		return 0, err
 	}
-
+	resb, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return 0, err
+	}
+	var resBody struct {
+		Code int32  `json:"code"`
+		Msg  string `json:"msg"`
+	}
+	err = json.Unmarshal(resb, &resBody)
+	if err != nil {
+		return 0, err
+	}
+	if resBody.Code != 200 {
+		log.Printf("Share error: %s", string(resb))
+		return 0, fmt.Errorf(resBody.Msg)
+	}
+	log.Printf("Robot path:%s", reqUrl)
+	log.Printf("Share successed.")
 	return len(content), nil
 }
 
 func (rb *Robot) getSign() (timestamp int64, sign string) {
-	timeStamp := time.Now().UnixNano()
-	s := fmt.Sprintf("%d\n%s", timeStamp, rb.AccessToken)
-	// Create a new HMAC by defining the hash type and the key (as byte array)
-	h := hmac.New(sha256.New, []byte(s))
-	// Get result and encode as hexadecimal string
-	return timeStamp, base64.URLEncoding.EncodeToString(h.Sum(nil))
+	timeStamp := time.Now().UnixNano() / 1e6
+	s := fmt.Sprintf("%d\n%s", timeStamp, rb.AccessKey)
+	h := hmac.New(sha256.New, []byte(rb.AccessKey))
+	h.Write([]byte(s))
+	return timeStamp, base64.StdEncoding.EncodeToString(h.Sum(nil))
 }

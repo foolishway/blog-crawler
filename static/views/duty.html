@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>值班</title>
+    <script src="/static/js/jquery-3.5.1.min.js"></script>
+    <script src="/static/js/duty.js"></script>
+</head>
+<body>
+    <a href="#" id="insert">新增值班人员</a>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>姓名</th>
+                <th>工号</th>
+                <th>电话号</th>
+                <th>值班日期</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .}}
+                <tr>
+                    <td>{{.Id}}</td>
+                    <td>{{.Name}}</td>
+                    <td>{{.EmployeesNum}}</td>
+                    <td>{{.PhoneNum}}</td>
+                    <td>星期{{.DutyDay}}</td>
+                    <td><a href="#" class="update">修改</a>|<a href="#" class="delete">删除</a></td>
+                </tr>
+            {{end}}
+        </tbody>
+    </table>
+</body>
+</html>

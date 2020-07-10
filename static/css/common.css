@@ -19,3 +19,8 @@
     margin: 0 auto;
     /*width:800px;*/
 }
+
+#login {
+    width: 500px;
+    margin:100px auto;
+}

@@ -1,6 +1,6 @@
 version: '3'
 services:
-  blog_crawler_db:
+  db:
     build:
       context: ./MySQL
     environment:
@@ -12,15 +12,16 @@ services:
     ports:
       - "3306:3306"
     tty: true
-  blog_crawler_app:
+  app:
     build: .
     volumes:
       - ./cmd:/blog-crawler/cmd
-      - ./blogCrawlerConf.json:/blog-crawler/blogCrawlerConf.json
+      - ./blogCrawlerConf.json:/blog-crawler/blogCrawlerConf.json-
+      - ./static:/blog-crawler/static
     container_name: blog_crawler_app
     ports:
       - "8003:8003"
     tty: true
     depends_on:
-      - blog_crawler_db
+      - db
     restart: on-failure
