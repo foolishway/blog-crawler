@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Flag}}</title>
+</head>
+<body>
+    <div id="duty-edit">
+        <form action="/dutyedit/" method="post">
+            <fieldset>
+                <legend>{{.Flag}}:</legend>
+                <label for="fname">姓名:</label>
+                <input type="text" id="name" name="name"><br><br>
+                <label for="lname">工号:</label>
+                <input type="password" id="employeeID" name="employeeID"><br><br>
+                <label for="lname">电话:</label>
+                <input type="password" id="phone" name="phone"><br><br>
+                <input type="submit" value="提交">
+            </fieldset>
+        </form>
+    </div>
+</body>
+</html>

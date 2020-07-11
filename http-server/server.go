@@ -34,7 +34,7 @@ func (hs *HttpServer) StartServer() {
 
 	//index
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		indexHandler(w, r, tpl)
+		indexHandler(w, r)
 	})
 
 	//duty
@@ -42,8 +42,11 @@ func (hs *HttpServer) StartServer() {
 
 	//login
 	http.HandleFunc("/login/", func(w http.ResponseWriter, r *http.Request) {
-		loginHandler(w, r, tpl)
+		loginHandler(w, r)
 	})
+
+	//edit duty
+	http.HandleFunc("/dutyedit/", authWapper(editDutyHandler))
 	//share
 	http.HandleFunc("/share", shareHandler)
 	err := http.ListenAndServe(":"+hs.Port, nil)
@@ -52,7 +55,7 @@ func (hs *HttpServer) StartServer() {
 	}
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request, tpl *template.Template) {
+func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.RequestURI != "/" && r.RequestURI != "/index.html" && r.RequestURI != "/index.htm" {
 		return
 	}
@@ -133,7 +136,7 @@ func shareHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Update share feild error: %v", err)
 	}
 }
-func dutyHandler(w http.ResponseWriter, r *http.Request, tpl *template.Template) {
+func dutyHandler(w http.ResponseWriter, r *http.Request) {
 	if r.RequestURI != "/duty/" {
 		return
 	}
@@ -145,8 +148,30 @@ func dutyHandler(w http.ResponseWriter, r *http.Request, tpl *template.Template)
 		duty,
 	)
 }
-
-func loginHandler(w http.ResponseWriter, r *http.Request, tpl *template.Template) {
+func editDutyHandler(w http.ResponseWriter, r *http.Request) {
+	if r.RequestURI != "/dutyedit/" {
+		return
+	}
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "Parse form error.", http.StatusInternalServerError)
+		return
+	}
+	//id := r.PostFormValue("id")
+	//name := r.PostFormValue("name")
+	//employeeNum := r.PostFormValue("employeeNum")
+	//phone := r.PostFormValue("phone")
+	////u := models.Duty{Name: name, EmployeesNum: employeeNum, PhoneNum: phone}
+	////update
+	//if id != "0" {
+	//
+	//}
+	////insert
+	//if id == "0" {
+	//
+	//}
+}
+func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.RequestURI != "/login/" && r.RequestURI != "/login" {
 		return
 	}
@@ -168,6 +193,9 @@ func loginHandler(w http.ResponseWriter, r *http.Request, tpl *template.Template
 		u := models.User{name, pwd}
 		if models.CheckUser(u) {
 			session, err := store.Get(r, sessionKey)
+			session.Options = &sessions.Options{
+				MaxAge: 86400,
+			}
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -196,7 +224,7 @@ func serveFile() {
 	http.Handle("/static/", handler)
 }
 
-func authWapper(handler func(w http.ResponseWriter, r *http.Request, tpl *template.Template)) func(w http.ResponseWriter, r *http.Request) {
+func authWapper(handler func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := store.Get(r, sessionKey)
 		if err != nil {
@@ -204,13 +232,12 @@ func authWapper(handler func(w http.ResponseWriter, r *http.Request, tpl *templa
 			return
 		}
 
-		// Set some session values.
+		// Check whether is login
 		isLogin, ok := session.Values["isLogin"].(bool)
 		if !isLogin || !ok {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
-		// Save it before we write to the response/return from the handler.
-		handler(w, r, tpl)
+		handler(w, r)
 	}
 }

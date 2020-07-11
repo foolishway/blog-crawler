@@ -1,30 +1,36 @@
 package models
 
 type Duty struct {
-	Id                                    int
-	Name, PhoneNum, EmployeesNum, DutyDay string
+	Id                           int
+	OnDuty                       int
+	Name, PhoneNum, EmployeesNum string
 }
 
 func GetAllDuty() []Duty {
-	//defer db.Close()
 	duty := make([]Duty, 0)
 	db.Table("duty").Find(&duty)
-	//fmt.Println(articles)
 	return duty
 }
 
 func GetDutyById(DutyId int) Duty {
-	return Duty{}
+	duty := Duty{}
+	db.Table("duty").Where("id = ?", DutyId).Find(&duty)
+	return duty
 }
 
-func UpdateDutyById(DutyId int) error {
-	return nil
+func UpdateDutyById(d Duty) error {
+	duty := Duty{}
+	db.Table("duty").Where("id = ?", d.Id).First(&duty)
+	duty.PhoneNum = d.PhoneNum
+	duty.EmployeesNum = d.EmployeesNum
+	duty.Name = d.Name
+	return db.Table("duty").Save(&duty).Error
 }
 
-func DelDutyById(DutyId int) error {
-	return nil
+func DelDutyById(d Duty) error {
+	return db.Table("duty").Delete(d).Error
 }
 
 func InsertDuty(duty Duty) error {
-	return nil
+	return db.Table("duty").Create(&duty).Error
 }

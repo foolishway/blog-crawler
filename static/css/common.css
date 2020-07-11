@@ -24,3 +24,6 @@
     width: 500px;
     margin:100px auto;
 }
+#duty table td{
+    text-align: center;
+}
