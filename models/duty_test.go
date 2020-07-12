@@ -23,7 +23,7 @@ func TestGetDutyById(t *testing.T) {
 
 func TestUpdateDutyById(t *testing.T) {
 	duty := Duty{Id: 2, Name: "流川枫", EmployeesNum: "106316", PhoneNum: "13523123213"}
-	err := UpdateDutyById(duty)
+	err := UpdateDuty(duty)
 	if err != nil {
 		t.Fatalf("update error %v", err)
 	}
@@ -43,5 +43,24 @@ func TestDelDutyById(t *testing.T) {
 	duty = GetDutyById(id)
 	if duty.Name != "" {
 		t.Fatalf("delete error want name nil, but %s", duty.Name)
+	}
+}
+
+func TestGetNextDuty(t *testing.T) {
+	want := "刘传明,张威,"
+	nextDuty, err := GetNextDuty()
+	if err != nil {
+		t.Fatalf("GetNextDuty error %v", err)
+	}
+
+	if len(nextDuty) != 2 {
+		t.Fatalf("GetNextDuty error %v, next duty != 2, duty info %v", err, nextDuty)
+	}
+	names := ""
+	for _, nd := range nextDuty {
+		names += nd.Name + ","
+	}
+	if names != want {
+		t.Fatalf("GetNextDuty error %v, want %s but %s", err, want, names)
 	}
 }

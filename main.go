@@ -2,6 +2,7 @@ package main
 
 import (
 	"blog-crawler/crawler"
+	"blog-crawler/duty"
 	hs "blog-crawler/http-server"
 	"blog-crawler/models"
 	"log"
@@ -26,7 +27,7 @@ func main() {
 		log.Fatalf("Config file not found.")
 	}
 
-	//init crawle
+	//init crawl
 	go startCrawl()
 
 	tick := time.Tick(24 * time.Hour)
@@ -46,6 +47,9 @@ func main() {
 
 	defer models.CloseDb()
 
+	//start duty notify
+	go duty.StartDuty()
+
 	//start http server
 	s := &hs.HttpServer{"8003"}
 	s.StartServer()
@@ -54,11 +58,4 @@ func startCrawl() {
 	log.Println("Start crawl...")
 	c := crawler.NewCrawler(confPath)
 	c.Start()
-}
-func fileExists(filename string) bool {
-	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }

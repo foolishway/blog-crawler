@@ -2,6 +2,7 @@ package utils
 
 import (
 	"math/rand"
+	"os"
 	"reflect"
 	"time"
 )
@@ -23,4 +24,12 @@ func RandomSlice(slc interface{}) []interface{} {
 		newSlice[i], newSlice[num] = newSlice[num], newSlice[i]
 	}
 	return newSlice
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }

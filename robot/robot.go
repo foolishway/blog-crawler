@@ -34,7 +34,7 @@ type msgStruct struct {
 	At      At     `json:"at"`
 }
 
-func (rb *Robot) Write(p []byte) (n int, err error) {
+func (rb *Robot) Write(p []byte, at []string) (n int, err error) {
 	timestamp, sign := rb.getSign()
 	v := make(url.Values)
 	v.Set("access_token", rb.AccessToken)
@@ -46,7 +46,7 @@ func (rb *Robot) Write(p []byte) (n int, err error) {
 	rs := msgStruct{
 		Msgtype: "text",
 		Text:    Text{Content: content},
-		At:      At{AtMobiles: []string{}},
+		At:      At{AtMobiles: at},
 	}
 	reqData, err := json.Marshal(&rs)
 

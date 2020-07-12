@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 type HttpServer struct {
@@ -40,6 +41,7 @@ func (hs *HttpServer) StartServer() {
 	//duty
 	http.HandleFunc("/duty/", authWapper(dutyHandler))
 
+	http.HandleFunc("/delete", authWapper(delDutyHandler))
 	//login
 	http.HandleFunc("/login/", func(w http.ResponseWriter, r *http.Request) {
 		loginHandler(w, r)
@@ -103,17 +105,17 @@ func shareHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, accessTokenSet := os.LookupEnv("ROBOT_ACCESS_TOKEN")
+	accessToken, accessTokenSet := os.LookupEnv("ROBOT_SHARE_ACCESS_TOKEN")
 	if !accessTokenSet {
-		errMsg = "ROBOT_ACCESS_TOKEN is required."
+		errMsg = "ROBOT_SHARE_ACCESS_TOKEN is required."
 		log.Printf(errMsg)
 		http.Error(w, errMsg, http.StatusInternalServerError)
 		return
 	}
 
-	accessKey, accessKeySet := os.LookupEnv("ROBOT_ACCESS_KEY")
+	accessKey, accessKeySet := os.LookupEnv("ROBOT_SHARE_SECRET")
 	if !accessKeySet {
-		errMsg = "ROBOT_ACCESS_KEY is required."
+		errMsg = "ROBOT_SHARE_SECRET is required."
 		log.Printf(errMsg)
 		http.Error(w, errMsg, http.StatusInternalServerError)
 		return
@@ -123,7 +125,7 @@ func shareHandler(w http.ResponseWriter, r *http.Request) {
 	//n, err := rb.Write([]byte("hellorobot"))
 
 	msg := fmt.Sprintf("大家好我是机器人小库，推荐给大家一篇文章；\n题目：%s；\n地址：%s；\n作者：%s；\n发布时间：%s；", rs.Title, rs.Address, rs.Author, rs.PublishTime)
-	n, err := rb.Write([]byte(msg))
+	n, err := rb.Write([]byte(msg), nil)
 	if err != nil || n == 0 {
 		log.Printf("Robot write error: %v", err)
 		http.Error(w, "", http.StatusInternalServerError)
@@ -149,27 +151,95 @@ func dutyHandler(w http.ResponseWriter, r *http.Request) {
 	)
 }
 func editDutyHandler(w http.ResponseWriter, r *http.Request) {
-	if r.RequestURI != "/dutyedit/" {
+	if r.Method == http.MethodGet {
+		queryForm := r.URL.Query()
+		ids, ok := queryForm["id"]
+		if !ok {
+			errMsg := "Parse query error."
+			log.Printf(errMsg)
+			http.Error(w, errMsg, http.StatusBadRequest)
+			return
+		}
+		id, err := strconv.Atoi(ids[0])
+		if err != nil {
+			errMsg := "Invalid id."
+			log.Printf(errMsg)
+			http.Error(w, errMsg, http.StatusBadRequest)
+			return
+		}
+		duty := models.Duty{Id: id}
+		if id != 0 {
+			duty = models.GetDutyById(id)
+		}
+		_ = tpl.ExecuteTemplate(
+			w,
+			"duty-edit.html",
+			duty,
+		)
+	}
+	if r.Method == http.MethodPost {
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, "Parse form error.", http.StatusInternalServerError)
+			return
+		}
+		id := r.PostFormValue("id")
+		name := r.PostFormValue("name")
+		employeeNum := r.PostFormValue("employeeNum")
+		phone := r.PostFormValue("phone")
+		u := models.Duty{Name: name, EmployeesNum: employeeNum, PhoneNum: phone}
+		var editError = func(err error) {
+			if err != nil {
+				errMsg := fmt.Sprintf("Update duty error: %v", err)
+				log.Printf(errMsg)
+				http.Error(w, errMsg, http.StatusInternalServerError)
+			}
+		}
+		//update
+		if id != "0" {
+			id, err := strconv.Atoi(id)
+			if err != nil {
+				http.Error(w, "Invalid id.", http.StatusBadRequest)
+			}
+			u.Id = id
+			err = models.UpdateDuty(u)
+			editError(err)
+		}
+		//insert
+		if id == "0" {
+			err = models.InsertDuty(u)
+			editError(err)
+		}
+		http.Redirect(w, r, "/duty/", http.StatusSeeOther)
+	}
+}
+func delDutyHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
 		return
 	}
 	err := r.ParseForm()
 	if err != nil {
-		http.Error(w, "Parse form error.", http.StatusInternalServerError)
+		errMsg := "Parse form error."
+		log.Printf(errMsg)
+		http.Error(w, errMsg, http.StatusInternalServerError)
 		return
 	}
-	//id := r.PostFormValue("id")
-	//name := r.PostFormValue("name")
-	//employeeNum := r.PostFormValue("employeeNum")
-	//phone := r.PostFormValue("phone")
-	////u := models.Duty{Name: name, EmployeesNum: employeeNum, PhoneNum: phone}
-	////update
-	//if id != "0" {
-	//
-	//}
-	////insert
-	//if id == "0" {
-	//
-	//}
+	id, err := strconv.Atoi(r.FormValue("id"))
+
+	if err != nil {
+		errMsg := "Invalid id."
+		log.Printf(errMsg)
+		http.Error(w, errMsg, http.StatusBadRequest)
+		return
+	}
+
+	err = models.DelDutyById(models.Duty{Id: id})
+	if err != nil {
+		errMsg := "Delete failed."
+		http.Error(w, errMsg, http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/duty/", http.StatusSeeOther)
 }
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.RequestURI != "/login/" && r.RequestURI != "/login" {
@@ -194,13 +264,14 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		if models.CheckUser(u) {
 			session, err := store.Get(r, sessionKey)
 			session.Options = &sessions.Options{
+				Path:   "/",
 				MaxAge: 86400,
 			}
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-
+			log.Printf("check OK")
 			// Set some session values.
 			session.Values["isLogin"] = true
 			// Save it before we write to the response/return from the handler.

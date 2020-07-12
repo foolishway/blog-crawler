@@ -20,10 +20,16 @@
     /*width:800px;*/
 }
 
-#login {
+#login, #duty-edit, #duty {
     width: 500px;
     margin:100px auto;
 }
+#duty table{
+    width: 100%;
+    margin-top: 5px;
+    border: 1px solid #888888;
+}
 #duty table td{
+    padding: 5px 0;
     text-align: center;
 }

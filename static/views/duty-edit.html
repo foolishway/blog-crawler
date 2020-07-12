@@ -2,20 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{.Flag}}</title>
+    <title>
+        {{if eq .Id 0}}
+            新增
+        {{else}}
+            编辑
+        {{end}}
+    </title>
+    <link rel="stylesheet" type="text/css" href="/static/css/common.css">
+    <script src="/static/js/jquery-3.5.1.min.js"></script>
+    <script src="/static/js/duty.js"></script>
 </head>
 <body>
     <div id="duty-edit">
-        <form action="/dutyedit/" method="post">
+        <form action="/dutyedit/" method="post" onsubmit="return validCheck()">
             <fieldset>
-                <legend>{{.Flag}}:</legend>
+                <legend>{{if eq .Id 0}}
+                    新增
+                {{else}}
+                    编辑
+                {{end}}:</legend>
+                <input type="hidden" id="id" name="id" value="{{.Id}}"><br><br>
                 <label for="fname">姓名:</label>
-                <input type="text" id="name" name="name"><br><br>
+                <input type="text" id="name" name="name" value="{{.Name}}"><br><br>
                 <label for="lname">工号:</label>
-                <input type="password" id="employeeID" name="employeeID"><br><br>
+                <input type="text" id="employeeNum" name="employeeNum" value="{{.EmployeesNum}}"><br><br>
                 <label for="lname">电话:</label>
-                <input type="password" id="phone" name="phone"><br><br>
-                <input type="submit" value="提交">
+                <input type="text" id="phone" name="phone" value="{{.PhoneNum}}"><br><br>
+                <input type="submit" id="dutySubmit" value="提交">
             </fieldset>
         </form>
     </div>
