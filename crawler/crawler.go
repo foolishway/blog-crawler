@@ -17,7 +17,7 @@ import (
 	"sync"
 )
 
-const avg = 10
+const avg = 20
 
 var existMap map[string]struct{}
 
@@ -105,7 +105,7 @@ func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
 
 	if posts.Length() == 0 {
 		if pageNum == 1 {
-			log.Printf("%s dit not published articles yet.")
+			log.Printf("%s dit not published articles yet.", b.Author)
 		}
 		stopCrawl = true
 		return
@@ -115,7 +115,7 @@ func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
 		if stopCrawl {
 			return
 		}
-		title := s.Find(b.TitleStyle).Text()
+		title := strings.TrimSpace(s.Find(b.TitleStyle).Text())
 		author := b.Author
 		//filter exclude
 		if checkExclude(title, cr.Exclude) {

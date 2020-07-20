@@ -13,7 +13,7 @@ func StartDuty() {
 	go dutyTicker()
 }
 
-//reminder duty every day at 10:00
+//reminder duty every day at 10:35
 func dutyTicker() {
 	for {
 		now := time.Now()
@@ -21,6 +21,11 @@ func dutyTicker() {
 		tickTime := time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 10, 35, 0, 0, tomorrow.Location())
 		t := time.NewTimer(tickTime.Sub(now))
 		<-t.C
+		week := tomorrow.Weekday().String()
+		//skip weekend
+		if week == "Saturday" || week == "Sunday" {
+			continue
+		}
 		dutyNotify()
 		log.Printf("start duty...")
 	}
