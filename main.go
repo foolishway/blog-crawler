@@ -17,6 +17,7 @@ var (
 )
 
 func main() {
+	initLog()
 	envConf, envSet := os.LookupEnv("BLOG_CRAWLER_CONF")
 	//if set BLOG_CRAWER_CONF environment variable, the cache file will be generated under the same path
 	if envSet {
@@ -54,8 +55,18 @@ func main() {
 	s := &hs.HttpServer{"8003"}
 	s.StartServer()
 }
+
 func startCrawl() {
 	log.Println("Start crawl...")
 	c := crawler.NewCrawler(confPath)
 	c.Start()
+}
+
+func initLog() {
+	logFile, err := os.OpenFile("./blog-crawler.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Printf("init log error %v\n", err)
+		return
+	}
+	log.SetOutput(logFile)
 }

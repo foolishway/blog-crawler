@@ -24,6 +24,7 @@ func dutyTicker() {
 		week := tomorrow.Weekday().String()
 		//skip weekend
 		if week == "Saturday" || week == "Sunday" {
+			log.Printf("%v is %s, skip.", tomorrow, week)
 			continue
 		}
 		dutyNotify()

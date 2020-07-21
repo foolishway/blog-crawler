@@ -47,7 +47,7 @@ func TestDelDutyById(t *testing.T) {
 }
 
 func TestGetNextDuty(t *testing.T) {
-	want := "刘传明,张威,"
+	want := "张威,刘传明,"
 	nextDuty, err := GetNextDuty()
 	if err != nil {
 		t.Fatalf("GetNextDuty error %v", err)
