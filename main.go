@@ -64,6 +64,9 @@ func startCrawl() {
 
 func initLog() {
 	logFile, err := os.OpenFile("./blog-crawler.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+
+	defer logFile.Close()
+
 	if err != nil {
 		log.Printf("init log error %v\n", err)
 		return
