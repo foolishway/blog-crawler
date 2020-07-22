@@ -16,8 +16,10 @@ var (
 	confPath string = "./blogCrawlerConf.json"
 )
 
-func main() {
+func init() {
 	initLog()
+}
+func main() {
 	envConf, envSet := os.LookupEnv("BLOG_CRAWLER_CONF")
 	//if set BLOG_CRAWER_CONF environment variable, the cache file will be generated under the same path
 	if envSet {
