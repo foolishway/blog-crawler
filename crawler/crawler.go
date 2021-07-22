@@ -1,68 +1,62 @@
 package crawler
 
 import (
-	"blog-crawler/models"
-	"encoding/json"
+	"bytes"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/PuerkitoBio/goquery"
+
+	//"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 )
 
-const avg = 20
-
-var existMap map[string]struct{}
-
-func fillExistMap() {
-	articles := models.GetAllArticles()
-	existMap = models.AriticleModelToMap(articles)
+type blog struct {
+	Author     string `json:"author"`
+	Address    string `json:"address"`
+	PageRule   string `json:pageRule`
+	PostStyle  string `json:postStyle`
+	TitleStyle string `json:titleStyle`
+	TimeStyle  string `json:timeStyle`
+	wg         *sync.WaitGroup
 }
-
 type Crawler struct {
-	Blogs           []models.Blog `json:blogs`
-	Exclude         []string      `json:exclude`
-	OutputType      string        `outputType`
-	Output          io.Writer
-	Mutex           sync.Mutex
-	CollectArticles []models.Article
+	Blogs      []blog   `json:blogs`
+	Exclude    []string `json:exclude`
+	OutputType string   `outputType`
+	Output     io.Writer
+	Buf        *bytes.Buffer
+	Mutex      sync.Mutex
+	CachePath  string
 }
 
 func (cr *Crawler) Start() {
-	fillExistMap()
 	blogs := cr.Blogs
-	wgQue := make([]*sync.WaitGroup, 0)
 	for i := 0; i < len(blogs); i++ {
-		wg := &sync.WaitGroup{}
-		wg.Add(1)
-		wgQue = append(wgQue, wg)
-		go cr.craw(wg, &(blogs[i]), 1)
+		blogs[i].wg = &sync.WaitGroup{}
+		blogs[i].wg.Add(1)
+		go cr.craw(&(blogs[i]), 1)
 	}
 	//wait all blogs complete
-	for i := 0; i < len(wgQue); i++ {
-		wgQue[i].Wait()
+	for i := 0; i < len(blogs); i++ {
+		blogs[i].wg.Wait()
 	}
-	fmt.Println("Crawl complete.")
-	//writeToCacheFile(cr.Buf, cr.CachePath)
-	if len(cr.CollectArticles) > 0 {
-		//fmt.Println(cr.CollectArticles)
-		models.InsertCollectArticles(cr.CollectArticles)
-	}
+	fmt.Println("complete.")
+	writeToCacheFile(cr.Buf, cr.CachePath)
 }
-func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
-	//fmt.Println("craw len(cr.CollectArticles)", len(cr.CollectArticles))
+func (cr *Crawler) craw(b *blog, pageNum int) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println(r)
 		}
-		wg.Done()
+		b.wg.Done()
 	}()
 	var addr string
 	if pageNum == 1 {
@@ -84,7 +78,7 @@ func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
 		}
 	}
 
-	var stopCrawl bool
+	var noNewBlog bool
 	// Request the HTML page.
 	res, err := http.Get(addr)
 	if err != nil {
@@ -92,7 +86,7 @@ func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		panic(fmt.Sprintf("Requst %s status code error: %d %s", b.Address, res.StatusCode, res.Status))
+		panic(fmt.Sprintf("Requst %s status code error: %d %s", addr, res.StatusCode, res.Status))
 	}
 
 	// Load the HTML document
@@ -107,23 +101,19 @@ func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
 		if pageNum == 1 {
 			log.Printf("%s dit not published articles yet.", b.Author)
 		}
-		stopCrawl = true
+		noNewBlog = true
 		return
 	}
 	// Find blogs
 	doc.Find(b.PostStyle).Each(func(i int, s *goquery.Selection) {
-		if stopCrawl {
-			return
-		}
-		title := strings.TrimSpace(s.Find(b.TitleStyle).Text())
-		author := b.Author
+		title := s.Find(b.TitleStyle).Text()
 		//filter exclude
 		if checkExclude(title, cr.Exclude) {
 			return
 		}
 		//report whether cache file contains the blog
-		if isExist(title+"_"+b.Author) || overArg(author, cr.CollectArticles) {
-			stopCrawl = true
+		if bytes.Contains(cr.Buf.Bytes(), []byte(cacheFormat(title, b.Author))) {
+			noNewBlog = true
 			return
 		}
 
@@ -140,33 +130,49 @@ func (cr *Crawler) craw(wg *sync.WaitGroup, b *models.Blog, pageNum int) {
 			}
 			address = u.Scheme + "://" + u.Host + address
 		}
-		cr.CollectArticles = append(cr.CollectArticles, models.Article{Title: title, Author: author, Address: address, PublishTime: timeStr})
+		author := b.Author
+		cr.writeToOutput(title, address, timeStr, author, cr.Output)
 	})
-	if !stopCrawl {
-		wg.Add(1)
+	if !noNewBlog {
+		b.wg.Add(1)
 		//initPageRule(b, doc)
 		pageNum++
-		cr.craw(wg, b, pageNum)
+		cr.craw(b, pageNum)
 	}
 }
+func (cr *Crawler) writeToOutput(title, address, time string, author string, output io.Writer) {
+	if title == "" || address == "" {
+		return
+	}
+	if output != nil {
+		t := title
+		ad := address
+		au := author
+		ti := time
+		if title == "" {
+			t = "--"
+		}
+		if address == "" {
+			ad = "--"
+		}
+		if author == "" {
+			au = "--"
+		}
+		if time == "" {
+			ti = "--"
+		}
+		fmt.Fprintf(output, fmt.Sprintf("题目：%s；\n地址：%s；\n作者：%s；\n发布时间：%s\n\n", t, ad, au, ti))
+	}
+	cr.Mutex.Lock()
+	c := cacheFormat(title, author)
+	if !bytes.Contains(cr.Buf.Bytes(), []byte(c)) {
+		cr.Buf.Write([]byte(c))
+	}
+	cr.Mutex.Unlock()
+}
 
-func NewCrawler(confPath string) *Crawler {
-	conf, err := os.Open(confPath)
-	if err != nil {
-		log.Fatalf("Open conf error %v", err)
-	}
-	defer conf.Close()
-
-	c := &Crawler{CollectArticles: make([]models.Article, 0)}
-	b, err := ioutil.ReadAll(conf)
-	if err != nil {
-		log.Fatalf("Read from conf error %v", err)
-	}
-	err = json.Unmarshal(b, c)
-	if err != nil {
-		log.Fatalf("Unmarshall json error: %v", err)
-	}
-	return c
+func cacheFormat(title, author string) string {
+	return fmt.Sprintf("[[%s_%s]]", title, author)
 }
 func checkExclude(exStr string, exs []string) bool {
 	for _, ex := range exs {
@@ -191,19 +197,15 @@ func replacePageNum(uri, newPage string) string {
 	}
 	return uri
 }
-func isExist(key string) bool {
-	_, exist := existMap[key]
-	return exist
-}
-func overArg(author string, cellectAticle []models.Article) bool {
-	var count int32
-	for _, article := range cellectAticle {
-		if article.Author == author {
-			count++
-		}
+func writeToCacheFile(buf *bytes.Buffer, cachePath string) {
+	f, err := os.OpenFile(cachePath, os.O_TRUNC|os.O_WRONLY, 0644)
+
+	if err != nil {
+		panic(fmt.Sprintf("Write to cache file error: %v", err))
 	}
-	if count >= avg {
-		return true
+	defer f.Close()
+	_, err = f.Write(buf.Bytes())
+	if err != nil {
+		panic(fmt.Sprintf("Write to cache file error: %v", err))
 	}
-	return false
 }
